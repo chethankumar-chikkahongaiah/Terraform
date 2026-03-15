@@ -75,12 +75,15 @@ resource "aws_internet_gateway" "my_igw" {
 #Nat Gateway
 
 resource "aws_eip" "my_eip" {
+    for_each = local.public_subnets
     domain = "vpc"
 }
 
 resource "aws_nat_gateway" "my_nat_gw" {
-    allocation_id = aws_eip.my_eip.id
-    subnet_id = aws_subnet.Public.id
+    for_each = aws_subnet.Public
+
+    allocation_id = aws_eip.my_eip[each.key].id
+    subnet_id = each.value.id
 
     tags = {
         Name = var.project_name
@@ -89,6 +92,7 @@ resource "aws_nat_gateway" "my_nat_gw" {
 
 # Route Table
 resource "aws_route_table" "public_route_table" {
+    for_each = aws_subnet.Public
     vpc_id = aws_vpc.my-vpc.id
     route {
         cidr_block = "0.0.0.0/0"
@@ -97,6 +101,7 @@ resource "aws_route_table" "public_route_table" {
 }
 
 resource "aws_route_table" "private_route_table" {
+    for_each = aws_subnet.private
     vpc_id = aws_vpc.my-vpc.id
     route {
         cidr_block = "0.0.0.0/0"
@@ -105,13 +110,15 @@ resource "aws_route_table" "private_route_table" {
 }
 
 resource "aws_route_table_association" "public_RTA" {
-    subnet_id = aws_subnet.private.id
-    route_table_id = aws_route_table.public_route_table.id
+    for_each = aws_subnet.Public
+    subnet_id = each.value.id
+    route_table_id = aws_route_table.public_RTA[each.key].id
 }
 
 resource "aws_route_table_association" "private_RTA" {
-    subnet_id = aws_subnet.private.id
-    route_table_id = aws_route_table.private_route_table.id
+    for_each = aws_subnet.private
+    subnet_id = each.value.id
+    route_table_id = aws_route_table.private_RTA[each_keyc].id
 }
 
 
